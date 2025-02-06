@@ -1,0 +1,23 @@
+name: Basic CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  basic-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Run a one-liner script
+      run: echo "Hello, this is a basic CI pipeline!"
+
+    - name: Run the index.js file
+      run: node index.js

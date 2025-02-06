@@ -1,0 +1,1 @@
+console.log("Hello, this is a basic CI pipeline!");
