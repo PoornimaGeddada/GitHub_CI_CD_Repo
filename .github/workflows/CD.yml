@@ -17,17 +17,9 @@ jobs:
       uses: actions/setup-node@v2
       with:
         node-version: '14'
-
-    - name: Install dependencies
-      run: npm install
-
-    - name: Build project
-      run: npm run build
-
+        
     - name: Deploy to Versal
       env:
         VERSAL_API_KEY: ${{ secrets.VERSAL_API_KEY }}
       run: |
-        # Replace this with your actual deployment command
-        echo "Deploying to Versal..."
-        # Example: versal deploy --api-key $VERSAL_API_KEY --project-id your_project_id
+        # TODO
