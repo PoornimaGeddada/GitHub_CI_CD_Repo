@@ -1,4 +1,4 @@
-name: Update Jira Issue
+name: Create Jira Issue with README Content
 
 on:
   push:
@@ -6,22 +6,34 @@ on:
       - main
 
 jobs:
-  update-jira:
+  create-jira-issue:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Update Jira Issue
+    - name: Read README file
+      id: read-readme
+      run: |
+        content=$(cat README.md)
+        echo "::set-output name=content::$content"
+
+    - name: Create Jira Issue
       env:
         JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
         JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
         JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-        JIRA_ISSUE_KEY: ${{ secrets.JIRA_ISSUE_KEY }}
+        JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
       run: |
+        issue_data=$(jq -n \
+          --arg summary "README Content" \
+          --arg description "${{ steps.read-readme.outputs.content }}" \
+          --arg project_key "$JIRA_PROJECT_KEY" \
+          '{fields: {project: {key: $project_key}, summary: $summary, description: $description, issuetype: {name: "Task"}}}')
+        
         curl -D- -u $JIRA_EMAIL:$JIRA_API_TOKEN \
-        -X PUT \
-        --data '{ "fields": { "description": "Code has been pushed to the main branch." } }' \
+        -X POST \
+        --data "$issue_data" \
         -H "Content-Type: application/json" \
-        $JIRA_BASE_URL/rest/api/2/issue/$JIRA_ISSUE_KEY
+        $JIRA_BASE_URL/rest/api/2/issue/
