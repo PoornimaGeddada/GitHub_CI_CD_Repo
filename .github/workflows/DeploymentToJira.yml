@@ -1,40 +1,58 @@
-name: Create Jira Issue with README Content
+name: Update Jira Issue with README Content
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  create-jira-issue:
+  update-jira:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Read README file
+    - name: Read README content
       id: read-readme
       run: |
-        content=$(cat README.md)
-        echo "::set-output name=content::$content"
+        README_CONTENT=$(cat README.md)
+        echo "README content: $README_CONTENT"
+        echo "::set-output name=content::$README_CONTENT"
 
-    - name: Create Jira Issue
+    - name: Create or Update Jira Issue
       env:
         JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
         JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
         JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
       run: |
-        issue_data=$(jq -n \
+        ISSUE_DATA=$(jq -n \
           --arg summary "README Content" \
           --arg description "${{ steps.read-readme.outputs.content }}" \
-          --arg project_key "$JIRA_PROJECT_KEY" \
-          '{fields: {project: {key: $project_key}, summary: $summary, description: $description, issuetype: {name: "Task"}}}')
+          --arg projectKey "$JIRA_PROJECT_KEY" \
+          '{fields: {project: {key: $projectKey}, summary: $summary, description: $description, issuetype: {name: "Task"}}}')
         
+        RESPONSE=$(curl -s -u $JIRA_EMAIL:$JIRA_API_TOKEN \
+          -X POST \
+          --data "$ISSUE_DATA" \
+          -H "Content-Type: application/json" \
+          $JIRA_BASE_URL/rest/api/2/issue/)
+        
+        ISSUE_KEY=$(echo $RESPONSE | jq -r '.key')
+        echo "Created issue key: $ISSUE_KEY"
+        echo "::set-output name=issue_key::$ISSUE_KEY"
+
+    - name: Update Jira Issue with README content
+      env:
+        JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+        JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+        JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        ISSUE_KEY: ${{ steps.create-issue.outputs.issue_key }}
+      run: |
+        echo "Updating issue key: $ISSUE_KEY with content: ${{ steps.read-readme.outputs.content }}"
         curl -D- -u $JIRA_EMAIL:$JIRA_API_TOKEN \
-        -X POST \
-        --data "$issue_data" \
+        -X PUT \
+        --data '{ "fields": { "description": "'"${{ steps.read-readme.outputs.content }}"'" } }' \
         -H "Content-Type: application/json" \
-        $JIRA_BASE_URL/rest/api/2/issue/
+        $JIRA_BASE_URL/rest/api/2/issue/$ISSUE_KEY
