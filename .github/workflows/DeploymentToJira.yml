@@ -2,8 +2,10 @@ name: Create Jira Issue with README Content
 
 on:
   push:
-    branches:
-      - main
+    push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   create-jira-issue:
